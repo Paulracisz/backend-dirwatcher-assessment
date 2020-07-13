@@ -10,6 +10,7 @@ import argparse
 import os
 import errno
 # import the error numbers so we can handle them
+import sys
 
 __author__ = "Paul Racisz + Chris Warren"
 
@@ -34,11 +35,7 @@ def watch_dir(args):
     If file is not in your dictionary anymore you have to log that you removed
     the file from your dictionary
     """
-    # logger info is plugging in command line arguments.
-    logger.info(f'Watching directory: {args.path}, '
-                f'File Extension: {args.ext}, '
-                f'Polling Interval: {args.interval}, '
-                f'Magic Text: {args.magic}')
+    
     # grabbing all the files and putting them in a list.
     file_list = os.listdir(args.path)
 
@@ -101,14 +98,12 @@ def signal_handler(sig_num, frame):
     :param frame: Not used
     :return None
     """
-    # Logs associated signal name (New way)
-    logger.warn('Received ' + signal.Signals(sig_num).name)
     # Logs associated signal name (the python2 way)
     signames = dict((k, v) for v, k in
                     reversed(sorted(signal.__dict__.items()))
                     if v.startswith('SIG') and not v.startswith('SIG_'))
     # print out the signal with the signal number we imported above
-    logger.warn('Received ' + signames[sig_num])
+    logger.warning('Received ' + signames[sig_num])
     global exit_flag
     exit_flag = True
 
@@ -124,8 +119,10 @@ def create_parser():
     return parser
 
 
-def main():
+def main(args):
     """Runs the main function."""
+    parser = create_parser()
+    parsed_args = parser.parse_args(args)
     logging.basicConfig(
         format='%(asctime)s.%(msecs)03d %(name)-12s '
                '%(levelname)-8s %(message)s',
@@ -141,8 +138,11 @@ def main():
         '-------------------------------------------------\n'
         .format(__file__, app_start_time.isoformat())
     )
-    parser = create_parser()
-    args = parser.parse_args()
+    # logger info is plugging in command line arguments.
+    logger.info(f'Watching directory: {parsed_args.path}, '
+                f'File Extension: {parsed_args.ext}, '
+                f'Polling Interval: {parsed_args.interval}, '
+                f'Magic Text: {parsed_args.magic}')
 
     # Connect these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
@@ -151,19 +151,19 @@ def main():
     while not exit_flag:
         try:
             # Call to watch_dir Function
-            watch_dir(args)
+            watch_dir(parsed_args)
         except OSError as e:
             # UNHANDLED exception
             # Log an ERROR level message here
             if e.errno == errno.ENOENT:
-                logger.error(f"{args.path} directory not found")
+                logger.error(f"{parsed_args.path} directory not found")
                 time.sleep(2)
             else:
                 logger.error(e)
         except Exception as e:
             logger.error(f"UNHANDLED EXCEPTION:{e}")
         # Sleeps while loop so cpu usage isn't at 100%
-        time.sleep(int(float(args.interval)))
+        time.sleep(int(float(parsed_args.interval)))
     # Final exit point
     # Logs a message that program is shutting down
     # Overall uptime since program start
@@ -180,4 +180,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
