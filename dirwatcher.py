@@ -35,7 +35,6 @@ def watch_dir(args):
     If file is not in your dictionary anymore you have to log that you removed
     the file from your dictionary
     """
-    
     # grabbing all the files and putting them in a list.
     file_list = os.listdir(args.path)
 
